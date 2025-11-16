@@ -2,6 +2,7 @@ package cli
 
 import (
 	"flag"
+	"golrc/internal/appstate"
 	"golrc/internal/logger"
 )
 
@@ -10,8 +11,10 @@ var (
 )
 
 type Args struct {
-	Version   bool   // Display version information
-	Directory string // Music directory
+	Version        bool   // Display version information
+	Directory      string // Music directory
+	FilterExisting bool   // Filter out music files that already have lyrics
+	DryRun         bool   // Perform a trial run with no changes made
 
 	Debug bool // Run in debug mode with logs
 }
@@ -29,17 +32,23 @@ func isFlagPassed(name string) bool {
 
 func GetArgs() (Args, error) {
 	var (
-		version   bool
-		directory string
+		version        bool
+		directory      string
+		filterExisting bool
+		dryRun         bool
 
 		debug bool
 	)
 
-	nonDefaultFlags := []string{"directory"}
+	nonDefaultFlags := []string{"dir"}
 
 	flag.BoolVar(&version, "version", false, "Display version information")
 	flag.BoolVar(&version, "v", false, "Display version information")
 	flag.StringVar(&directory, "dir", "", "Directory to search for music")
+	flag.BoolVar(&filterExisting, "exist", false, "Filter out music files that already have lyrics")
+	flag.BoolVar(&filterExisting, "e", false, "Filter out music files that already have lyrics")
+	flag.BoolVar(&dryRun, "dry", false, "Perform a trial run with no changes made")
+	flag.BoolVar(&dryRun, "n", false, "Perform a trial run with no changes made")
 
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode with logs")
 	flag.BoolVar(&debug, "d", false, "Run in debug mode with logs")
@@ -52,17 +61,22 @@ func GetArgs() (Args, error) {
 	}
 
 	logger.DEBUG = debug
+	appstate.DRY_RUN = dryRun
 
 	log.D("Parsed command line args", "args", map[string]any{
-		"version":   version,
-		"debug":     debug,
-		"directory": directory,
+		"version":        version,
+		"debug":          debug,
+		"directory":      directory,
+		"dryRun":         dryRun,
+		"filterExisting": filterExisting,
 	},
 	)
 
 	return Args{
-		Version:   version,
-		Directory: directory,
+		Version:        version,
+		Directory:      directory,
+		FilterExisting: filterExisting,
+		DryRun:         dryRun,
 
 		Debug: debug,
 	}, nil
