@@ -113,8 +113,7 @@ func WriteLyric(track Track) error {
 		return errors.New("audio file path is empty")
 	}
 
-	parts := strings.Split(track.AudioFile, ".")
-	lrcPath := parts[0]
+	lrcPath := strings.TrimSuffix(track.AudioFile, path.Ext(track.AudioFile))
 	lrcPath += ".lrc"
 	log.D("LRC path", "path", lrcPath)
 

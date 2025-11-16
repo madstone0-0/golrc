@@ -16,7 +16,9 @@ type Args struct {
 	FilterExisting bool   // Filter out music files that already have lyrics
 	DryRun         bool   // Perform a trial run with no changes made
 
-	Debug bool // Run in debug mode with logs
+	Debug  bool // Run in debug mode with logs
+	NArgs  int  // Number of arguments passed
+	NFlags int  // Number of flags passed
 }
 
 func isFlagPassed(name string) bool {
@@ -54,9 +56,11 @@ func GetArgs() (Args, error) {
 	flag.BoolVar(&debug, "d", false, "Run in debug mode with logs")
 
 	flag.Parse()
-	for _, f := range nonDefaultFlags {
-		if !isFlagPassed(f) {
-			log.F("Non-default flag not passed", "flag", f)
+	if flag.NFlag() > 0 || flag.NArg() > 0 {
+		for _, f := range nonDefaultFlags {
+			if !isFlagPassed(f) {
+				log.F("Non-default flag not passed", "flag", f)
+			}
 		}
 	}
 
@@ -69,6 +73,8 @@ func GetArgs() (Args, error) {
 		"directory":      directory,
 		"dryRun":         dryRun,
 		"filterExisting": filterExisting,
+		"nArgs":          flag.NArg(),
+		"nFlags":         flag.NFlag(),
 	},
 	)
 
@@ -78,6 +84,12 @@ func GetArgs() (Args, error) {
 		FilterExisting: filterExisting,
 		DryRun:         dryRun,
 
-		Debug: debug,
+		NArgs:  flag.NArg(),
+		NFlags: flag.NFlag(),
+		Debug:  debug,
 	}, nil
+}
+
+func PrintUsage() {
+	flag.Usage()
 }

@@ -16,6 +16,10 @@ func main() {
 	if err != nil {
 		log.F("Error parsing arguments", "error", err)
 	}
+	if args.NArgs == 0 && args.NFlags == 0 {
+		cli.PrintUsage()
+		os.Exit(1)
+	}
 
 	if args.Version {
 		fmt.Printf("%s version: %s\n", constant.APPNAME, constant.VERSION)
