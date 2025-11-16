@@ -52,7 +52,6 @@ func main() {
 		log.F("Failed to get lyrics", "error", err)
 	}
 	log.I("[+] Fetched lyrics", "count", len(tracks))
-	log.D("[+] Tracks with lyrics", "tracks", tracks)
 
 	wrote := lrclib.WriteLyrics(tracks)
 

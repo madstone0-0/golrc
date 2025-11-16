@@ -24,6 +24,7 @@ type Track struct {
 	ID           int    `json:"id"`
 	PlainLyrics  string `json:"plainLyrics"`
 	SyncedLyrics string `json:"syncedLyrics"`
+	Intrumental  bool   `json:"instrumental"`
 }
 
 func (t Track) GetTag() library.Tag {
@@ -35,10 +36,20 @@ func (t Track) GetAudioFile() string {
 }
 
 func (t Track) HasLyrics() bool {
-	return t.PlainLyrics != "" || t.SyncedLyrics != ""
+	return t.Intrumental || (t.PlainLyrics != "" || t.SyncedLyrics != "")
 }
 
 func (t Track) GetSyncedLyrics() string {
+	if t.Intrumental {
+		w := fmt.Sprintf(`[ar:%s]
+[al:%s]
+[ti:%s]
+[tool:golrc]
+[00:00.00]♪ Instrumental ♪
+`, t.Tag.Artist, t.Tag.Album, t.Tag.Title)
+		return w
+	}
+
 	if t.SyncedLyrics == "" {
 		return ""
 	}
@@ -76,6 +87,7 @@ func GetLyrics(tag library.Tag) (Track, error) {
 		log.E("Error fetching lyrics from LRCLib", "error", err)
 		return track, err
 	}
+	log.D("Track", "track", track)
 	track.AudioFile = tag.AudioFile
 	log.D("Fetched lyrics from LRCLib", "trackID", track.ID)
 	track.Tag = tag
@@ -122,7 +134,7 @@ func WriteLyric(track Track) error {
 		return errors.New("no lyrics available to write")
 	}
 
-	if track.SyncedLyrics == "" {
+	if !track.Intrumental && track.SyncedLyrics == "" {
 		log.D("Plain lyrics", "lyrics", track.GetPlainLyrics())
 		err := provider.WriteLRC(lrcPath, track, track.PlainLyrics)
 		if err != nil {
