@@ -56,7 +56,7 @@ func GetArgs() (Args, error) {
 	flag.BoolVar(&debug, "d", false, "Run in debug mode with logs")
 
 	flag.Parse()
-	if flag.NFlag() > 0 || flag.NArg() > 0 {
+	if !version && (flag.NFlag() > 0 || flag.NArg() > 0) {
 		for _, f := range nonDefaultFlags {
 			if !isFlagPassed(f) {
 				log.F("Non-default flag not passed", "flag", f)
