@@ -11,6 +11,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var (
@@ -74,7 +75,14 @@ func (t Track) GetLyrics() string {
 	return t.GetPlainLyrics()
 }
 
-func GetLyrics(tag library.Tag) (Track, error) {
+func (t Track) GetId() int {
+	return t.ID
+}
+
+type LrcLib struct {
+}
+
+func getLyrics(tag library.Tag) (Track, error) {
 	params := tag.Params()
 	params.Set("track_name", tag.Title)
 	params.Set("artist_name", tag.Artist)
@@ -94,7 +102,9 @@ func GetLyrics(tag library.Tag) (Track, error) {
 	return track, nil
 }
 
-func GetAllLyrics(tags []library.Tag) ([]Track, error) {
+func (l LrcLib) GetAllLyrics(tags []library.Tag) ([]Track, []library.Tag, error) {
+	notFound := make([]library.Tag, 0, len(tags))
+	nFChan := make(chan library.Tag)
 	in := make(chan library.Tag)
 	go func() {
 		for _, tag := range tags {
@@ -103,23 +113,36 @@ func GetAllLyrics(tags []library.Tag) ([]Track, error) {
 		close(in)
 	}()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for tag := range nFChan {
+			notFound = append(notFound, tag)
+		}
+	}()
+
 	res := utils.ProcessAndGather(in, func(tag library.Tag) (Track, error) {
 		zero := Track{}
 		log.I("[~] Fetching lyrics", "title", tag.Title, "artist", tag.Artist, "album", tag.Album)
 
-		t, err := GetLyrics(tag)
+		t, err := getLyrics(tag)
 		if err != nil {
 			log.E("Failed to get lyrics", "title", tag.Title, "artist", tag.Artist, "error", err)
+			nFChan <- tag
 			return zero, err
 		}
 		log.I("[+] Fetched lyrics", "trackID", t.ID, "title", tag.Title, "artist", tag.Artist, "album", tag.Album)
 		return t, nil
 	}, max(len(tags)/10, 10))
 
-	return res, nil
+	close(nFChan)
+	wg.Wait()
+
+	return res, notFound, nil
 }
 
-func WriteLyric(track Track) error {
+func writeLyric(track Track) error {
 	if track.AudioFile == "" {
 		log.E("Audio file is empty, cannot write lyrics", "trackID", track.ID)
 		return errors.New("audio file path is empty")
@@ -155,7 +178,7 @@ func WriteLyric(track Track) error {
 	return nil
 }
 
-func WriteLyrics(tracks []Track) int {
+func (l LrcLib) WriteLyrics(tracks []Track) int {
 	in := make(chan Track)
 	go func() {
 		for _, t := range tracks {
@@ -163,7 +186,7 @@ func WriteLyrics(tracks []Track) int {
 				in <- t
 			} else {
 				if t.GetTag().Title != "" && t.GetTag().Artist != "" && t.GetTag().Album != "" {
-					log.W("[~] Skipping track without lyrics or audio file", "title", t.Tag.Title, "artist", t.Tag.Artist, "album", t.Tag.Album)
+					log.W("[~] Skipping track without lyrics or audio file", "title", t.GetTag().Title, "artist", t.GetTag().Artist, "album", t.GetTag().Album)
 				}
 			}
 		}
@@ -177,7 +200,7 @@ func WriteLyrics(tracks []Track) int {
 
 	wrote := 0
 	errs := utils.ProcessAndGather(in, func(track Track) (ErrMsg, error) {
-		err := WriteLyric(track)
+		err := writeLyric(track)
 		if err != nil {
 			return ErrMsg{track, err}, err
 		}
@@ -193,4 +216,24 @@ func WriteLyrics(tracks []Track) int {
 	}
 
 	return wrote
+}
+
+func (l LrcLib) GetAndWriteLyrics(tags []library.Tag) (int, []library.Tag, error) {
+	tracks, notFound, err := l.GetAllLyrics(tags)
+	if err != nil {
+		log.E("Failed to get lyrics", "error", err)
+		return 0, nil, err
+	}
+	log.I("[+] Fetched lyrics", "count", len(tracks))
+
+	wrote := l.WriteLyrics(tracks)
+	return wrote, notFound, nil
+}
+
+func (l LrcLib) GetName() string {
+	return "LrcLib"
+}
+
+func New() (LrcLib, error) {
+	return LrcLib{}, nil
 }

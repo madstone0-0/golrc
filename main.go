@@ -7,6 +7,7 @@ import (
 	log "golrc/internal/logger"
 	"golrc/internal/utils"
 	"golrc/library"
+	"golrc/provider"
 	"golrc/provider/lrclib"
 	"os"
 )
@@ -47,14 +48,36 @@ func main() {
 	}
 	log.I("[+] Parsed tags", "count", len(tags))
 
-	tracks, err := lrclib.GetAllLyrics(tags)
-	if err != nil {
-		log.F("Failed to get lyrics", "error", err)
+	switch args.Provider {
+	case cli.AUTO:
+		ctors := []provider.ProviderCtor{
+			{
+				Name:     "LrcLib",
+				Priority: 0,
+				Ctor: func() (provider.Provider, error) {
+					return lrclib.New()
+				},
+			},
+		}
+
+		log.I("[+] Using provider", "provider", args.Provider.String())
+		err := provider.TryProviders(tags, ctors...)
+		if err != nil {
+			log.F("Error trying providers", "error", err)
+		}
+
+	case cli.LRCLIB:
+		prv, err := lrclib.New()
+		if err != nil {
+			log.F("Failed to create LrcLib provider", "error", err)
+		}
+		log.I("[+] Using provider", "provider", args.Provider)
+		err = provider.TryProvider(tags, prv)
+		if err != nil {
+			log.F("Error trying LrcLib provider", "error", err)
+		}
+	default:
+		log.F("Unsupported lyrics provider", "provider", args.Provider)
 	}
-	log.I("[+] Fetched lyrics", "count", len(tracks))
-
-	wrote := lrclib.WriteLyrics(tracks)
-
-	log.I("[+] Lyrics fetching completed", "total", len(files), "written", wrote)
 
 }

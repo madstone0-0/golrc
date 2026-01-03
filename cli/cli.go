@@ -1,20 +1,52 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"golrc/internal/appstate"
 	"golrc/internal/logger"
+	"strings"
 )
 
 var (
 	log = logger.NewTaggedLogger("CLI")
 )
 
+type ProviderType int
+
+const (
+	AUTO ProviderType = iota
+	LRCLIB
+)
+
+func (p ProviderType) String() string {
+	switch p {
+	case LRCLIB:
+		return "lrclib"
+	case AUTO:
+		return "auto"
+	default:
+		return ""
+	}
+}
+
+func parseProviderType(provider string) (ProviderType, error) {
+	switch strings.ToLower(provider) {
+	case "lrclib":
+		return LRCLIB, nil
+	case "auto":
+		return AUTO, nil
+	default:
+		return -1, errors.New("invalid provider type")
+	}
+}
+
 type Args struct {
-	Version        bool   // Display version information
-	Directory      string // Music directory
-	FilterExisting bool   // Filter out music files that already have lyrics
-	DryRun         bool   // Perform a trial run with no changes made
+	Version        bool         // Display version information
+	Directory      string       // Music directory
+	FilterExisting bool         // Filter out music files that already have lyrics
+	DryRun         bool         // Perform a trial run with no changes made
+	Provider       ProviderType // Lyrics provider to use
 
 	Debug  bool // Run in debug mode with logs
 	NArgs  int  // Number of arguments passed
@@ -39,6 +71,8 @@ func GetArgs() (Args, error) {
 		filterExisting bool
 		dryRun         bool
 
+		provider ProviderType
+
 		debug bool
 	)
 
@@ -51,6 +85,14 @@ func GetArgs() (Args, error) {
 	flag.BoolVar(&filterExisting, "e", false, "Filter out music files that already have lyrics")
 	flag.BoolVar(&dryRun, "dry", false, "Perform a trial run with no changes made")
 	flag.BoolVar(&dryRun, "n", false, "Perform a trial run with no changes made")
+	flag.Func("provider", "Lyrics provider to use (lrclib)", func(s string) error {
+		p, err := parseProviderType(s)
+		if err != nil {
+			return err
+		}
+		provider = p
+		return nil
+	})
 
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode with logs")
 	flag.BoolVar(&debug, "d", false, "Run in debug mode with logs")
@@ -73,6 +115,7 @@ func GetArgs() (Args, error) {
 		"directory":      directory,
 		"dryRun":         dryRun,
 		"filterExisting": filterExisting,
+		"provider":       provider,
 		"nArgs":          flag.NArg(),
 		"nFlags":         flag.NFlag(),
 	},
@@ -83,6 +126,7 @@ func GetArgs() (Args, error) {
 		Directory:      directory,
 		FilterExisting: filterExisting,
 		DryRun:         dryRun,
+		Provider:       provider,
 
 		NArgs:  flag.NArg(),
 		NFlags: flag.NFlag(),
