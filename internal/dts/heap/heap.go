@@ -4,7 +4,8 @@ type Cmp[T any] func(a, b T) int
 
 type Heap[T any] struct {
 	cmp  Cmp[T]
-	base []T n    int
+	base []T
+	n    int
 }
 
 func (h *Heap[T]) Size() int {
