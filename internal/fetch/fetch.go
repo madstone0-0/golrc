@@ -17,21 +17,21 @@ var (
 	log = logger.NewTaggedLogger("INTERNAL(FETCH)")
 )
 
-var DEFAULT_TIMEOUT = 30 * time.Second
+var DefaultTimeout = 30 * time.Second
 
 type Fetcher interface {
 	Get(path string, obj any) error
 }
 
 var client *http.Client = &http.Client{
-	Timeout: DEFAULT_TIMEOUT,
+	Timeout: DefaultTimeout,
 }
 
 type Fetch struct {
-	BaseUrl string
+	BaseURL string
 }
 
-func cleanUrl(url string) string {
+func cleanURL(url string) string {
 	url = strings.TrimSpace(url)
 	return url
 }
@@ -66,8 +66,8 @@ func (f *Fetch) Get(path string, obj any) error {
 		return err
 	}
 
-	urlPath := fmt.Sprintf("%s%s", f.BaseUrl, path)
-	urlPath = cleanUrl(urlPath)
+	urlPath := fmt.Sprintf("%s%s", f.BaseURL, path)
+	urlPath = cleanURL(urlPath)
 
 	resp, err := client.Get(urlPath)
 	if err != nil {
@@ -99,8 +99,8 @@ func (f *Fetch) Post(path, contentType string, body io.Reader, obj any) error {
 		return err
 	}
 
-	urlPath := fmt.Sprintf("%s/%s", f.BaseUrl, path)
-	urlPath = cleanUrl(urlPath)
+	urlPath := fmt.Sprintf("%s/%s", f.BaseURL, path)
+	urlPath = cleanURL(urlPath)
 
 	resp, err := client.Post(urlPath, contentType, body)
 	if err != nil {
@@ -117,8 +117,8 @@ func (f *Fetch) GetReturn(path string) (string, error) {
 		return "", err
 	}
 
-	urlPath := fmt.Sprintf("%s/%s", f.BaseUrl, path)
-	urlPath = cleanUrl(urlPath)
+	urlPath := fmt.Sprintf("%s/%s", f.BaseURL, path)
+	urlPath = cleanURL(urlPath)
 
 	resp, err := client.Get(urlPath)
 	if err != nil {
@@ -139,8 +139,8 @@ func (f *Fetch) GetReturn(path string) (string, error) {
 	return string(body), nil
 }
 
-func NewFetcher(baseUrl string) Fetch {
+func NewFetcher(baseURL string) Fetch {
 	return Fetch{
-		BaseUrl: baseUrl,
+		BaseURL: baseURL,
 	}
 }
