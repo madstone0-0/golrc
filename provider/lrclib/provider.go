@@ -134,7 +134,7 @@ func (l LrcLib) GetAllLyrics(tags []library.Tag) ([]Track, []library.Tag, error)
 		}
 		log.I("[+] Fetched lyrics", "trackID", t.ID, "title", tag.Title, "artist", tag.Artist, "album", tag.Album)
 		return t, nil
-	}, max(len(tags)/10, 10))
+	}, max(len(tags)/5, 5))
 
 	close(nFChan)
 	wg.Wait()
