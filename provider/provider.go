@@ -35,7 +35,7 @@ func WriteLRC(p string, track ITrack, data string) error {
 
 type Provider interface {
 	GetName() string
-	GetAndWriteLyrics([]library.Tag) (int, []library.Tag, error)
+	GetAndWriteLyrics([]library.Tag, int) (int, []library.Tag, error)
 }
 
 type ProviderCtor struct {
@@ -75,8 +75,8 @@ func CreateProviders(ctors ...ProviderCtor) (*heap.Heap[ProviderItem], error) {
 	return providers, nil
 }
 
-func TryProvider(tags []library.Tag, prv Provider) error {
-	wrote, _, err := prv.GetAndWriteLyrics(tags)
+func TryProvider(maxConc int, tags []library.Tag, prv Provider) error {
+	wrote, _, err := prv.GetAndWriteLyrics(tags, maxConc)
 	if err != nil {
 		log.E("[-] Failed to get and write lyrics", "provider", prv.GetName(), "error", err)
 		return err
@@ -86,7 +86,7 @@ func TryProvider(tags []library.Tag, prv Provider) error {
 	return nil
 }
 
-func TryProviders(tags []library.Tag, ctors ...ProviderCtor) error {
+func TryProviders(maxConc int, tags []library.Tag, ctors ...ProviderCtor) error {
 	providers, err := CreateProviders(ctors...)
 	if err != nil {
 		return err
@@ -102,7 +102,7 @@ func TryProviders(tags []library.Tag, ctors ...ProviderCtor) error {
 		prv := prvItem.Provider
 		log.I("[+] Trying provider", "provider", prv.GetName())
 		log.D("[*] Provider details", "provider", prv.GetName(), "remaining_tags", len(searchTags), "priority", prvItem.Priority)
-		wrote, notFound, err := prv.GetAndWriteLyrics(searchTags)
+		wrote, notFound, err := prv.GetAndWriteLyrics(searchTags, maxConc)
 		searchTags = notFound
 		if err != nil {
 			log.E("[-] Failed to get and write lyrics", "provider", prv.GetName(), "error", err)

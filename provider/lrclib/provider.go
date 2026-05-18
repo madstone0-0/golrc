@@ -102,7 +102,7 @@ func getLyrics(tag library.Tag) (Track, error) {
 	return track, nil
 }
 
-func (l LrcLib) GetAllLyrics(tags []library.Tag) ([]Track, []library.Tag, error) {
+func (l LrcLib) GetAllLyrics(tags []library.Tag, maxConc int) ([]Track, []library.Tag, error) {
 	notFound := make([]library.Tag, 0, len(tags))
 	nFChan := make(chan library.Tag)
 	in := make(chan library.Tag)
@@ -134,7 +134,7 @@ func (l LrcLib) GetAllLyrics(tags []library.Tag) ([]Track, []library.Tag, error)
 		}
 		log.I("[+] Fetched lyrics", "trackID", t.ID, "title", tag.Title, "artist", tag.Artist, "album", tag.Album)
 		return t, nil
-	}, max(len(tags)/5, 5))
+	}, maxConc)
 
 	close(nFChan)
 	wg.Wait()
@@ -218,8 +218,8 @@ func (l LrcLib) WriteLyrics(tracks []Track) int {
 	return wrote
 }
 
-func (l LrcLib) GetAndWriteLyrics(tags []library.Tag) (int, []library.Tag, error) {
-	tracks, notFound, err := l.GetAllLyrics(tags)
+func (l LrcLib) GetAndWriteLyrics(tags []library.Tag, maxConc int) (int, []library.Tag, error) {
+	tracks, notFound, err := l.GetAllLyrics(tags, maxConc)
 	if err != nil {
 		log.E("Failed to get lyrics", "error", err)
 		return 0, nil, err

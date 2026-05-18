@@ -61,7 +61,7 @@ func main() {
 		}
 
 		log.I("[+] Using provider", "provider", args.Provider.String())
-		err := provider.TryProviders(tags, ctors...)
+		err := provider.TryProviders(args.MaxConc, tags, ctors...)
 		if err != nil {
 			log.F("Error trying providers", "error", err)
 		}
@@ -72,7 +72,7 @@ func main() {
 			log.F("Failed to create LrcLib provider", "error", err)
 		}
 		log.I("[+] Using provider", "provider", args.Provider)
-		err = provider.TryProvider(tags, prv)
+		err = provider.TryProvider(args.MaxConc, tags, prv)
 		if err != nil {
 			log.F("Error trying LrcLib provider", "error", err)
 		}

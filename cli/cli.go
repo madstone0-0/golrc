@@ -47,6 +47,7 @@ type Args struct {
 	FilterExisting bool         // Filter out music files that already have lyrics
 	DryRun         bool         // Perform a trial run with no changes made
 	Provider       ProviderType // Lyrics provider to use
+	MaxConc        int          // Maximum number of lyrics to fetch at once
 
 	Debug  bool // Run in debug mode with logs
 	NArgs  int  // Number of arguments passed
@@ -64,12 +65,34 @@ func isFlagPassed(name string) bool {
 	return found
 }
 
+type Validator = func() error
+
+func V[T any](arg T, val func(T) error) Validator {
+	return func() error {
+		return val(arg)
+	}
+}
+
+func Validate(vs ...Validator) error {
+	var err error
+
+	for _, v := range vs {
+		e := v()
+		if e != nil {
+			err = errors.Join(e, err)
+		}
+	}
+
+	return err
+}
+
 func GetArgs() (Args, error) {
 	var (
 		version        bool
 		directory      string
 		filterExisting bool
 		dryRun         bool
+		maxConc        int
 
 		provider ProviderType
 
@@ -85,6 +108,7 @@ func GetArgs() (Args, error) {
 	flag.BoolVar(&filterExisting, "e", false, "Filter out music files that already have lyrics")
 	flag.BoolVar(&dryRun, "dry", false, "Perform a trial run with no changes made")
 	flag.BoolVar(&dryRun, "n", false, "Perform a trial run with no changes made")
+	flag.IntVar(&maxConc, "mC", 5, "Fetch n lyrics concurrently")
 	flag.Func("provider", "Lyrics provider to use (lrclib)", func(s string) error {
 		p, err := parseProviderType(s)
 		if err != nil {
@@ -106,6 +130,17 @@ func GetArgs() (Args, error) {
 		}
 	}
 
+	err := Validate(V(maxConc, func(maxConc int) error {
+		if maxConc <= 0 || maxConc >= 30 {
+			return errors.New("max concurrent fetches must be between 1 and 30")
+		}
+		return nil
+	}))
+
+	if err != nil {
+		return Args{}, err
+	}
+
 	logger.DEBUG = debug
 	appstate.DRY_RUN = dryRun
 
@@ -114,6 +149,7 @@ func GetArgs() (Args, error) {
 		"debug":          debug,
 		"directory":      directory,
 		"dryRun":         dryRun,
+		"maxConc":        maxConc,
 		"filterExisting": filterExisting,
 		"provider":       provider,
 		"nArgs":          flag.NArg(),
@@ -126,6 +162,7 @@ func GetArgs() (Args, error) {
 		Directory:      directory,
 		FilterExisting: filterExisting,
 		DryRun:         dryRun,
+		MaxConc:        maxConc,
 		Provider:       provider,
 
 		NArgs:  flag.NArg(),
